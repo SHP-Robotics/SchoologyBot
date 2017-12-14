@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 import time
 
 import aiohttp as aiohttp
@@ -27,7 +26,6 @@ class SchoologyClient:
         _head = self.get_auth_header()
         if headers is not None:
             _head.update(headers)
-        print(_head)
         async with self.session.post(destination, json=payload, headers=_head) as resp:
             js = await resp.text()
             log.debug(js)
