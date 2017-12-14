@@ -1,0 +1,6 @@
+schoology_cred.json
+venv/
+.idea/
+
+*.pyc
+
