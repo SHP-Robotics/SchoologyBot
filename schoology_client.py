@@ -27,8 +27,10 @@ class SchoologyClient:
         if headers is not None:
             _head.update(headers)
         async with self.session.post(destination, json=payload, headers=_head) as resp:
-            js = await resp.text()
-            log.debug(js)
+            if 399 < resp.status < 600:  # 4xx, 5xx errors
+                raise HTTPError(resp.status, await resp.text())
+            js = await resp.json()
+            log.debug(str(js))
             return js
 
     def get_auth_header(self):
@@ -47,3 +49,9 @@ class SchoologyClient:
         }
         return headers
 
+
+class HTTPError(Exception):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+        self.message = message
