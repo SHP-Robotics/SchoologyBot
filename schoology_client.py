@@ -16,22 +16,24 @@ class SchoologyClient:
             _data = json.load(f)
             self.consumer_key = _data['consumer_key']
             self.consumer_secret = _data['consumer_secret']
-        self.session = aiohttp.ClientSession()
 
-    async def post_update(self, group_id, text):
+    async def post_update(self, group_id, text, attachments=None):
         payload = {'body': text}
+        if attachments:
+            payload['attachments'] = [a.to_json() for a in attachments]
         return await self.post(f"{API_BASE_URL}/groups/{group_id}/updates", payload)
 
     async def post(self, destination, payload, headers=None):
         _head = self.get_auth_header()
         if headers is not None:
             _head.update(headers)
-        async with self.session.post(destination, json=payload, headers=_head) as resp:
-            if 399 < resp.status < 600:  # 4xx, 5xx errors
-                raise HTTPError(resp.status, await resp.text())
-            js = await resp.json()
-            log.debug(str(js))
-            return js
+        async with aiohttp.ClientSession() as session:
+            async with session.post(destination, data=json.dumps(payload), headers=_head) as resp:
+                if 399 < resp.status < 600:  # 4xx, 5xx errors
+                    raise HTTPError(resp.status, await resp.text())
+                js = await resp.json()
+                log.debug(str(js))
+                return js
 
     def get_auth_header(self):
         headers = {
@@ -48,6 +50,26 @@ class SchoologyClient:
                              f"oauth_signature=\"{self.consumer_secret}%26\""
         }
         return headers
+
+
+class Attachment:
+    def __init__(self, _type='url', title='Unnamed', url='', thumbnail=''):
+        self.type = _type
+        self.title = title
+        self.url = url
+        self.thumbnail = thumbnail
+
+    @classmethod
+    def from_discord_attachment(cls, attachment):
+        return cls('url', attachment['filename'], attachment['url'], attachment['url'])
+
+    def to_json(self):
+        return {
+            'type': self.type,
+            'title': self.title,
+            'url': self.url,
+            'thumbnail': self.thumbnail
+        }
 
 
 class HTTPError(Exception):
